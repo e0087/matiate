@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麻雀 待ち当て練習アプリ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3', 'メイリオ', Meiryo, 'MS Pゴシック', sans-serif;
+            background: #2c5f5f;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #1a5f3e;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .table-layout {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1.2;
+            max-width: 900px;
+            margin: 0 auto 20px;
+            background: #2d6b47;
+            border-radius: 15px;
+            border: 3px solid #1a4d2e;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 中央情報エリア - Mリーグ風 */
+        .center-info {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 280px;
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .center-title {
+            font-size: 14px;
+            color: #ffd700;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        .game-status {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 3px;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .status-value.wind {
+            font-size: 24px;
+            color: #ffd700;
+        }
+
+        .dora-section {
+            margin-top: 15px;
+        }
+
+        .dora-label {
+            font-size: 12px;
+            color: #ffd700;
+            margin-bottom: 8px;
+        }
+
+        .dora-display {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .yama-count {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .pai-area {
+            position: absolute;
+        }
+
+        /* 自分の手牌 - 下部中央 */
+        .player-hand {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 2px;
+            align-items: center;
+        }
+
+        /* 捨て牌エリア - 4方向配置 */
+        .discard-area {
+            position: absolute;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: 1fr;
+            gap: 3px;
+            max-height: 30px;
+        }
+
+        /* 下家(左側) */
+        .discard-shimocha {
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 140px;
+        }
+
+        /* 対面(上側) */
+        .discard-toimen {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 180px;
+        }
+
+        /* 上家(右側) */
+        .discard-kamicha {
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 140px;
+        }
+
+        /* 自分(下側右寄り) */
+        .discard-jibun {
+            bottom: 95px;
+            right: 50px;
+            width: 180px;
+        }
+
+        .pai-img {
+            width: 42px;
+            height: auto;
+            border-radius: 3px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s;
+        }
+
+        .pai-img.small {
+            width: 22px;
+        }
+
+        .pai-img.highlighted {
+            border: 3px solid #ff4444;
+            box-shadow: 0 0 15px #ff4444;
+            transform: scale(1.1);
+        }
+
+        .meld-group {
+            display: flex;
+            gap: 2px;
+            margin-right: 8px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        button {
+            padding: 15px 45px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-advance {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-advance:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-ron {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            display: none;
+            animation: pulse 1s infinite;
+        }
+
+        .btn-ron:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.5);
+        }
+
+        .btn-tsumo {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            display: none;
+            animation: pulse 1s infinite;
+        }
+
+        .btn-tsumo:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            animation: none;
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #fff 0%, #f5f5f5 100%);
+            border-radius: 20px;
+            padding: 35px;
+            max-width: 650px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #333;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e0e0e0;
+        }
+
+        .modal-header.success {
+            color: #4caf50;
+        }
+
+        .modal-header.error {
+            color: #f44336;
+        }
+
+        .modal-body {
+            margin-bottom: 25px;
+        }
+
+        .yaku-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .yaku-item {
+            padding: 12px 15px;
+            background: linear-gradient(135deg, #f5f5f5 0%, #fff 100%);
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 16px;
+        }
+
+        .point-display {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            margin: 25px 0;
+            color: #f44336;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-footer {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .btn-close {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px 40px;
+            font-size: 16px;
+        }
+
+        .btn-close:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .waiting-tiles {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .furiten-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffe6a7 100%);
+            color: #856404;
+            padding: 18px;
+            border-radius: 10px;
+            margin: 18px 0;
+            border: 2px solid #ffc107;
+            box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
+        }
+
+        .hand-display {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .label {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: bold;
+            margin-left: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .label-riichi {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+        }
+
+        .label-dama {
+            background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
+            color: white;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .table-layout {
+                max-width: 100%;
+            }
+
+            .pai-img {
+                width: 32px;
+            }
+
+            .pai-img.small {
+                width: 18px;
+            }
+
+            button {
+                padding: 12px 30px;
+                font-size: 16px;
+            }
+
+            .controls {
+                flex-wrap: wrap;
+            }
+
+            .center-info {
+                min-width: 200px;
+                padding: 15px 20px;
+            }
+
+            .status-value {
+                font-size: 16px;
+            }
+
+            .modal-content {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="table-layout" id="table">
+            <!-- 中央情報エリア(Mリーグ風) -->
+            <div class="center-info">
+                <div class="center-title">東四局 3本場</div>
+                
+                <div class="game-status">
+                    <div class="status-item">
+                        <div class="status-label">場風</div>
+                        <div class="status-value wind" id="bakaze">東</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">自風</div>
+                        <div class="status-value wind" id="jikaze">南</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">本場</div>
+                        <div class="status-value" id="honba">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">供託</div>
+                        <div class="status-value" id="kyotaku">0</div>
+                    </div>
+                </div>
+
+                <div class="dora-section">
+                    <div class="dora-label">● ドラ表示牌 ●</div>
+                    <div class="dora-display" id="dora-display">
+                        <!-- ドラ表示牌がここに表示される -->
+                    </div>
+                </div>
+
+                <div class="yama-count">
+                    残り <span id="yama-count">24</span> 枚
+                </div>
+            </div>
+
+            <!-- 自分の手牌 -->
+            <div class="pai-area player-hand" id="player-hand">
+                <!-- 手牌がここに表示される -->
+            </div>
+
+            <!-- 捨て牌エリア -->
+            <div class="pai-area discard-area discard-shimocha" id="discard-shimocha"></div>
+            <div class="pai-area discard-area discard-toimen" id="discard-toimen"></div>
+            <div class="pai-area discard-area discard-kamicha" id="discard-kamicha"></div>
+            <div class="pai-area discard-area discard-jibun" id="discard-jibun"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-advance" id="btn-advance">進む ▶</button>
+            <button class="btn-ron" id="btn-ron">ロン!</button>
+            <button class="btn-tsumo" id="btn-tsumo">ツモ!</button>
+        </div>
+    </div>
+
+    <!-- アガリダイアログ -->
+    <div class="modal" id="modal-win">
+        <div class="modal-content">
+            <div class="modal-header success">🎉 アガリ! 🎉</div>
+            <div class="modal-body">
+                <div class="hand-display" id="win-hand"></div>
+                <ul class="yaku-list" id="yaku-list"></ul>
+                <div class="point-display" id="point-display"></div>
+                <div id="payment-info"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-close" onclick="closeModal('modal-win')">次の問題へ →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- チョンボダイアログ -->
+    <div class="modal" id="modal-chombo">
+        <div class="modal-content">
+            <div class="modal-header error">❌ チョンボ!</div>
+            <div class="modal-body">
+                <div id="chombo-reason"></div>
+                <div id="furiten-info"></div>
+                <div>
+                    <h3 style="margin-top: 20px; color: #333;">正しい待ち牌:</h3>
+                    <div class="waiting-tiles" id="correct-waiting"></div>
+                </div>
+                <div id="correct-points"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-close" onclick="closeModal('modal-chombo')">次の問題へ →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 流局ダイアログ -->
+    <div class="modal" id="modal-ryukyoku">
+        <div class="modal-content">
+            <div class="modal-header error">流局</div>
+            <div class="modal-body">
+                <p style="font-size: 18px; text-align: center; margin-bottom: 20px;">
+                    山が尽きました。見落としたアガリ牌があります。
+                </p>
+                <div>
+                    <h3 style="color: #333;">見落とした待ち牌:</h3>
+                    <div class="waiting-tiles" id="missed-waiting"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-close" onclick="closeModal('modal-ryukyoku')">次の問題へ →</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@kobalab/majiang-core@2.5.7/dist/majiang.min.js"></script>
+    <script src="mahjong-game.js"></script>
+</body>
+</html>
