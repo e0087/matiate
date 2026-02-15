@@ -557,7 +557,75 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/@kobalab/majiang-core@2.5.7/dist/majiang.min.js"></script>
+    <!-- Majiang ライブラリを複数のCDNから読み込み（フォールバック） -->
+    <script>
+        // Majiangライブラリを複数のCDNから順番に試す
+        (function() {
+            const cdnUrls = [
+                'https://unpkg.com/@kobalab/majiang-core@2.5.7/dist/majiang.min.js',
+                'https://cdn.jsdelivr.net/npm/@kobalab/majiang-core@2.5.7/dist/majiang.min.js',
+                'https://cdn.jsdelivr.net/npm/@kobalab/majiang-core@latest/dist/majiang.min.js'
+            ];
+            
+            let currentIndex = 0;
+            
+            function loadScript(url) {
+                return new Promise((resolve, reject) => {
+                    console.log(`Trying to load Majiang from: ${url}`);
+                    const script = document.createElement('script');
+                    script.src = url;
+                    script.onload = () => {
+                        console.log(`Successfully loaded from: ${url}`);
+                        resolve();
+                    };
+                    script.onerror = () => {
+                        console.error(`Failed to load from: ${url}`);
+                        reject();
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+            
+            function tryNextCdn() {
+                if (currentIndex >= cdnUrls.length) {
+                    console.error('All CDN attempts failed');
+                    alert('⚠️ 麻雀ライブラリの読み込みに失敗しました。\n\n' +
+                          'すべてのCDNサーバーから読み込みを試みましたが失敗しました。\n\n' +
+                          '考えられる原因:\n' +
+                          '1. インターネット接続の問題\n' +
+                          '2. ファイアウォール/セキュリティソフトによるブロック\n' +
+                          '3. CDNサーバーの一時的な障害\n\n' +
+                          '解決方法:\n' +
+                          '• インターネット接続を確認\n' +
+                          '• 別のブラウザで試す\n' +
+                          '• しばらく時間をおいて再度試す');
+                    return;
+                }
+                
+                loadScript(cdnUrls[currentIndex])
+                    .then(() => {
+                        // 読み込み成功 - Majiangが利用可能か確認
+                        setTimeout(() => {
+                            if (typeof Majiang === 'undefined') {
+                                console.warn('Script loaded but Majiang is undefined, trying next CDN...');
+                                currentIndex++;
+                                tryNextCdn();
+                            } else {
+                                console.log('Majiang library is ready!');
+                            }
+                        }, 500);
+                    })
+                    .catch(() => {
+                        // 読み込み失敗 - 次のCDNを試す
+                        currentIndex++;
+                        tryNextCdn();
+                    });
+            }
+            
+            // 読み込み開始
+            tryNextCdn();
+        })();
+    </script>
     <script src="mahjong-game.js"></script>
 </body>
 </html>

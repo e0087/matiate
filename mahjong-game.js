@@ -16,19 +16,29 @@ const WIND_NAMES = ['東', '南', '西', '北'];
 function waitForMajiang() {
     return new Promise((resolve, reject) => {
         let attempts = 0;
-        const maxAttempts = 50; // 5秒間待つ
+        const maxAttempts = 100; // 10秒間待つ（延長）
         
         const checkInterval = setInterval(() => {
             attempts++;
-            console.log(`Checking Majiang... attempt ${attempts}/${maxAttempts}`);
+            
+            // 詳細ログ（最初と最後のみ、途中は5回ごと）
+            if (attempts === 1 || attempts % 5 === 0 || attempts >= maxAttempts) {
+                console.log(`Checking Majiang... attempt ${attempts}/${maxAttempts}`);
+            }
             
             if (typeof Majiang !== 'undefined') {
-                console.log('Majiang library found!');
+                console.log('✅ Majiang library found!');
+                console.log('Majiang.Shoupai:', typeof Majiang.Shoupai);
+                console.log('Majiang.Util:', typeof Majiang.Util);
                 clearInterval(checkInterval);
                 resolve();
             } else if (attempts >= maxAttempts) {
                 clearInterval(checkInterval);
-                console.error('Majiang library failed to load after 5 seconds');
+                console.error('❌ Majiang library failed to load after 10 seconds');
+                console.error('Please check:');
+                console.error('1. Internet connection');
+                console.error('2. Browser console for errors');
+                console.error('3. Try a different browser');
                 reject(new Error('Majiang library not loaded'));
             }
         }, 100);
@@ -927,17 +937,35 @@ let game;
 
 // 初期化
 window.addEventListener('DOMContentLoaded', async () => {
+    console.log('=== Mahjong Trainer Initialization ===');
     console.log('DOM Content Loaded');
     console.log('Protocol:', window.location.protocol);
     console.log('URL:', window.location.href);
+    console.log('User Agent:', navigator.userAgent);
+    console.log('Online:', navigator.onLine);
+    
+    // オンライン状態をチェック
+    if (!navigator.onLine) {
+        alert('⚠️ インターネットに接続されていません。\n\nオンラインになってから再度お試しください。');
+        return;
+    }
+    
+    // Majiangが既に読み込まれているかチェック
+    console.log('Checking if Majiang is already loaded...');
+    console.log('typeof Majiang:', typeof Majiang);
     
     game = new MahjongGame();
     
     try {
+        console.log('Starting game initialization...');
         await game.init();
-        console.log('Game initialization complete');
+        console.log('✅ Game initialization complete');
     } catch (error) {
-        console.error('Failed to initialize game:', error);
+        console.error('❌ Failed to initialize game:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
         
         // エラーメッセージ
         let message = '❌ 麻雀ライブラリの読み込みに失敗しました。\n\n';
@@ -947,15 +975,16 @@ window.addEventListener('DOMContentLoaded', async () => {
                       '【推奨】以下のいずれかの方法で実行してください:\n\n' +
                       '1. ローカルサーバーを使用:\n' +
                       '   python -m http.server 8000\n' +
-                      '   → http://localhost:8000/index.html\n\n' +
+                      '   → http://localhost:8000/\n\n' +
                       '2. GitHub Pagesで公開:\n' +
                       '   → GITHUB_PAGES_SETUP.md を参照';
         } else {
             message += '以下を確認してください:\n' +
                       '1. インターネットに接続されているか\n' +
-                      '2. ブラウザのコンソール(F12)でエラーを確認\n' +
-                      '3. 別のブラウザで試してみる\n\n' +
-                      'ページをリロードしてもう一度お試しください。';
+                      '2. F12キーを押してコンソールを確認\n' +
+                      '3. 別のブラウザで試してみる\n' +
+                      '4. 数分待ってから再度アクセス\n\n' +
+                      'コンソールに詳細なエラー情報が表示されています。';
         }
         
         alert(message);
@@ -987,4 +1016,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             console.error('Game not initialized');
         }
     });
+    
+    console.log('=== Initialization Complete ===');
 });
