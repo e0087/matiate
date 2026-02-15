@@ -928,16 +928,8 @@ let game;
 // 初期化
 window.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM Content Loaded');
-    
-    // ローカルファイル実行の警告
-    if (window.location.protocol === 'file:') {
-        console.warn('Running from local file. Please use a local server.');
-        alert('⚠️ 警告: ローカルファイルから直接実行しています。\n\n' +
-              'ローカルサーバーを使用してください:\n' +
-              'python -m http.server 8000\n\n' +
-              'その後、ブラウザで以下にアクセス:\n' +
-              'http://localhost:8000/mahjong-trainer.html');
-    }
+    console.log('Protocol:', window.location.protocol);
+    console.log('URL:', window.location.href);
     
     game = new MahjongGame();
     
@@ -946,13 +938,27 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.log('Game initialization complete');
     } catch (error) {
         console.error('Failed to initialize game:', error);
-        alert('❌ 麻雀ライブラリの読み込みに失敗しました。\n\n' +
-              '以下を確認してください:\n' +
-              '1. インターネットに接続されているか\n' +
-              '2. ローカルサーバーで実行しているか\n' +
-              '   python -m http.server 8000\n' +
-              '3. ブラウザのコンソール(F12)でエラーを確認\n\n' +
-              'ページをリロードしてもう一度お試しください。');
+        
+        // エラーメッセージ
+        let message = '❌ 麻雀ライブラリの読み込みに失敗しました。\n\n';
+        
+        if (window.location.protocol === 'file:') {
+            message += '⚠️ ローカルファイルから実行しています。\n\n' +
+                      '【推奨】以下のいずれかの方法で実行してください:\n\n' +
+                      '1. ローカルサーバーを使用:\n' +
+                      '   python -m http.server 8000\n' +
+                      '   → http://localhost:8000/index.html\n\n' +
+                      '2. GitHub Pagesで公開:\n' +
+                      '   → GITHUB_PAGES_SETUP.md を参照';
+        } else {
+            message += '以下を確認してください:\n' +
+                      '1. インターネットに接続されているか\n' +
+                      '2. ブラウザのコンソール(F12)でエラーを確認\n' +
+                      '3. 別のブラウザで試してみる\n\n' +
+                      'ページをリロードしてもう一度お試しください。';
+        }
+        
+        alert(message);
         return;
     }
 
