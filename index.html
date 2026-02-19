@@ -408,6 +408,34 @@
             color: white;
         }
 
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 10000;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* レスポンシブ対応 */
         @media (max-width: 768px) {
             .table-layout {
@@ -447,7 +475,13 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div id="loading">
+        <div>麻雀ライブラリを読み込んでいます...</div>
+        <div class="spinner"></div>
+        <div id="loading-status" style="font-size: 12px; margin-top: 10px;">初期化中...</div>
+    </div>
+
+    <div class="container" style="display: none;" id="main-container">
         <div class="table-layout" id="table">
             <!-- 中央情報エリア(Mリーグ風) -->
             <div class="center-info">
@@ -557,75 +591,106 @@
         </div>
     </div>
 
-    <!-- Majiang ライブラリを複数のCDNから読み込み（フォールバック） -->
+    <!-- Majiang ライブラリ - GitHubのビルド済みファイルを直接読み込み -->
     <script>
-        // Majiangライブラリを複数のCDNから順番に試す
-        (function() {
-            const cdnUrls = [
-                'https://unpkg.com/@kobalab/majiang-core@2.5.7/dist/majiang.min.js',
-                'https://cdn.jsdelivr.net/npm/@kobalab/majiang-core@2.5.7/dist/majiang.min.js',
-                'https://cdn.jsdelivr.net/npm/@kobalab/majiang-core@latest/dist/majiang.min.js'
-            ];
+        console.log('=== Loading Majiang Library ===');
+        
+        // ローディング表示更新
+        function updateLoadingStatus(message) {
+            const status = document.getElementById('loading-status');
+            if (status) status.textContent = message;
+            console.log(message);
+        }
+        
+        updateLoadingStatus('GitHubからライブラリをダウンロード中...');
+        
+        // GitHubのビルド済みファイルを直接読み込む
+        const script = document.createElement('script');
+        script.src = 'https://raw.githubusercontent.com/kobalab/Majiang/master/dist/js/majiang.js';
+        script.async = false;
+        script.crossOrigin = 'anonymous';
+        
+        script.onload = function() {
+            console.log('✅ Script loaded successfully');
+            updateLoadingStatus('ライブラリを確認中...');
             
-            let currentIndex = 0;
-            
-            function loadScript(url) {
-                return new Promise((resolve, reject) => {
-                    console.log(`Trying to load Majiang from: ${url}`);
-                    const script = document.createElement('script');
-                    script.src = url;
-                    script.onload = () => {
-                        console.log(`Successfully loaded from: ${url}`);
-                        resolve();
+            // Majiangが利用可能になるまで待つ
+            let checkCount = 0;
+            const checkInterval = setInterval(function() {
+                checkCount++;
+                if (typeof Majiang !== 'undefined') {
+                    clearInterval(checkInterval);
+                    console.log('✅ Majiang is available!');
+                    console.log('Majiang.Shoupai:', typeof Majiang.Shoupai);
+                    console.log('Majiang.Util:', typeof Majiang.Util);
+                    updateLoadingStatus('初期化中...');
+                    
+                    // メインスクリプトを読み込む
+                    const gameScript = document.createElement('script');
+                    gameScript.src = 'mahjong-game.js';
+                    gameScript.onload = function() {
+                        console.log('✅ Game script loaded');
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('main-container').style.display = 'block';
                     };
-                    script.onerror = () => {
-                        console.error(`Failed to load from: ${url}`);
-                        reject();
+                    gameScript.onerror = function() {
+                        console.error('❌ Failed to load game script');
+                        updateLoadingStatus('エラー: ゲームスクリプトが見つかりません');
+                        alert('ゲームスクリプトの読み込みに失敗しました。\nmahjong-game.js ファイルが存在するか確認してください。');
                     };
-                    document.head.appendChild(script);
-                });
-            }
-            
-            function tryNextCdn() {
-                if (currentIndex >= cdnUrls.length) {
-                    console.error('All CDN attempts failed');
-                    alert('⚠️ 麻雀ライブラリの読み込みに失敗しました。\n\n' +
-                          'すべてのCDNサーバーから読み込みを試みましたが失敗しました。\n\n' +
-                          '考えられる原因:\n' +
-                          '1. インターネット接続の問題\n' +
-                          '2. ファイアウォール/セキュリティソフトによるブロック\n' +
-                          '3. CDNサーバーの一時的な障害\n\n' +
-                          '解決方法:\n' +
-                          '• インターネット接続を確認\n' +
+                    document.head.appendChild(gameScript);
+                    
+                } else if (checkCount > 150) {
+                    clearInterval(checkInterval);
+                    console.error('❌ Majiang not available after script load');
+                    updateLoadingStatus('エラー: ライブラリの初期化に失敗');
+                    alert('Majiangライブラリの初期化に失敗しました。\n\n' +
+                          'ページをリロードしてください。\n\n' +
+                          'それでも解決しない場合:\n' +
                           '• 別のブラウザで試す\n' +
                           '• しばらく時間をおいて再度試す');
-                    return;
                 }
-                
-                loadScript(cdnUrls[currentIndex])
-                    .then(() => {
-                        // 読み込み成功 - Majiangが利用可能か確認
-                        setTimeout(() => {
-                            if (typeof Majiang === 'undefined') {
-                                console.warn('Script loaded but Majiang is undefined, trying next CDN...');
-                                currentIndex++;
-                                tryNextCdn();
-                            } else {
-                                console.log('Majiang library is ready!');
-                            }
-                        }, 500);
-                    })
-                    .catch(() => {
-                        // 読み込み失敗 - 次のCDNを試す
-                        currentIndex++;
-                        tryNextCdn();
-                    });
-            }
+            }, 100);
+        };
+        
+        script.onerror = function() {
+            console.error('❌ Failed to load script from GitHub');
+            updateLoadingStatus('エラー: GitHubからのダウンロードに失敗');
             
-            // 読み込み開始
-            tryNextCdn();
-        })();
+            // フォールバック: jsdelivr CDN を試す
+            console.log('Trying fallback CDN...');
+            updateLoadingStatus('別のCDNから読み込みを試行中...');
+            
+            const fallbackScript = document.createElement('script');
+            fallbackScript.src = 'https://cdn.jsdelivr.net/gh/kobalab/Majiang@master/dist/js/majiang.js';
+            fallbackScript.async = false;
+            
+            fallbackScript.onload = function() {
+                console.log('✅ Fallback script loaded');
+                script.onload(); // 同じ onload ハンドラを実行
+            };
+            
+            fallbackScript.onerror = function() {
+                console.error('❌ All loading attempts failed');
+                updateLoadingStatus('エラー: すべての読み込みに失敗');
+                alert('❌ 麻雀ライブラリの読み込みに失敗しました。\n\n' +
+                      'すべての方法を試しましたが読み込めませんでした。\n\n' +
+                      '考えられる原因:\n' +
+                      '• インターネット接続の問題\n' +
+                      '• ファイアウォールによるGitHub/CDNのブロック\n' +
+                      '• 企業/学校ネットワークの制限\n\n' +
+                      '解決方法:\n' +
+                      '• 別のネットワーク(自宅WiFiなど)で試す\n' +
+                      '• VPNを使用または無効にする\n' +
+                      '• 別のブラウザで試す');
+            };
+            
+            console.log('Loading fallback from:', fallbackScript.src);
+            document.head.appendChild(fallbackScript);
+        };
+        
+        console.log('Loading script from:', script.src);
+        document.head.appendChild(script);
     </script>
-    <script src="mahjong-game.js"></script>
 </body>
 </html>
